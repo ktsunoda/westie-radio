@@ -1,0 +1,48 @@
+name: Auto Deploy to GAS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint . --ext .js,.ts
+
+      - name: Run Prettier Check
+        run: npx prettier --check .
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Configure clasp credentials
+        run: |
+          echo "${{ secrets.CLASP_CREDENTIALS_BASE64 }}" | base64 --decode > ~/.clasprc.json
+
+      - name: Create .clasp.json
+        run: |
+          echo "{
+            \"scriptId\": \"${{ secrets.CLASP_SCRIPT_ID }}\"
+          }" > .clasp.json
+
+      - name: Push to GAS
+        run: |
+          clasp push
+          clasp version "Auto version from GitHub"
+          VERSION=$(clasp versions | tail -1 | awk '{print $1}')
+          echo "Deploying version $VERSION..."
+          clasp deploy --description "CI Deploy" --versionNumber "$VERSION"

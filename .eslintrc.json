@@ -1,0 +1,22 @@
+{
+  "env": {
+    "es6": true,
+    "browser": true
+  },
+  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+  "plugins": ["googleappsscript"],
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "off"
+  },
+  "globals": {
+    "Logger": "readonly",
+    "SpreadsheetApp": "readonly",
+    "ScriptApp": "readonly",
+    "PropertiesService": "readonly",
+    "DriveApp": "readonly",
+    "GmailApp": "readonly",
+    "Utilities": "readonly",
+    "Session": "readonly"
+  }
+}

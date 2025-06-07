@@ -45,12 +45,10 @@ function sync() {
     addTracksToSpotifyPlaylist(newTrackUris);
   }
 
-  const trackUris = getSpotifyPlaylistTracks();
-  let excessTrackCount = 0;
-  if (trackUris.length > MAX_SPOTIFY_PLAYLIST_SIZE) {
-    excessTrackCount = trackUris.length - MAX_SPOTIFY_PLAYLIST_SIZE;
-    removeTracksFromSpotifyPlaylist(trackUris.slice(0, excessTrackCount));
-  }
+  const spotifyPlaylistSize = getSpotifyPlaylistSize();
+  excessTrackCount = Math.max(0, spotifyPlaylistSize - MAX_SPOTIFY_PLAYLIST_SIZE);
+  log(`Spotify playlist size: ${spotifyPlaylistSize}, excess tracks: ${excessTrackCount}`);
+  removeFirstNTracks(excessTrackCount);
 
   log(`Finished syncing. Added ${newTrackUris.length} tracks and removed ${excessTrackCount}.`);
 }

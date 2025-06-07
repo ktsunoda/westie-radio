@@ -32,6 +32,7 @@ function getSpotifyAccessToken() {
   return service.getAccessToken();
 }
 
+// eslint-disable-next-line no-unused-vars
 function authCallback(request) {
   const authorized = getSpotifyService().handleCallback(request);
   return HtmlService.createHtmlOutput(
@@ -39,6 +40,7 @@ function authCallback(request) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars
 function authorizeSpotify() {
   const service = getSpotifyService();
   if (!service.hasAccess()) {
@@ -49,6 +51,7 @@ function authorizeSpotify() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function getSpotifyTrackUri(artist, title) {
   const query = encodeURIComponent(`track:${title} artist:${artist}`);
   const url = `${SPOTIFY_SEARCH_API_URL}?q=${query}&type=track&limit=1`;
@@ -70,31 +73,23 @@ function getSpotifyTrackUri(artist, title) {
   return null;
 }
 
-function getSpotifyPlaylistTracks() {
+// eslint-disable-next-line no-unused-vars
+function getSpotifyPlaylistSize() {
   const playlistId = PropertiesService.getScriptProperties().getProperty('SPOTIFY_PLAYLIST_ID');
-  const baseUrl = `${SPOTIFY_PLAYLISTS_API_URL}/${playlistId}/tracks?fields=items(track(uri)),next`;
-  const trackUris = [];
-  let nextUrl = baseUrl;
+  const url = `${SPOTIFY_PLAYLISTS_API_URL}/${playlistId}/tracks?fields=total`;
 
-  while (nextUrl) {
-    const response = UrlFetchApp.fetch(nextUrl, {
-      method: 'get',
-      headers: {
-        Authorization: 'Bearer ' + getSpotifyAccessToken(),
-      },
-    });
-    const result = JSON.parse(response.getContentText());
-    for (const item of result.items) {
-      if (item.track && item.track.uri) {
-        trackUris.push(item.track.uri);
-      }
-    }
-    nextUrl = result.next;
-  }
+  const response = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: {
+      Authorization: 'Bearer ' + getSpotifyAccessToken(),
+    },
+  });
 
-  return trackUris;
+  const result = JSON.parse(response.getContentText());
+  return result.total;
 }
 
+// eslint-disable-next-line no-unused-vars
 function addTracksToSpotifyPlaylist(trackUris) {
   const playlistId = PropertiesService.getScriptProperties().getProperty('SPOTIFY_PLAYLIST_ID');
   const url = `${SPOTIFY_PLAYLISTS_API_URL}/${playlistId}/tracks`;
@@ -120,29 +115,45 @@ function addTracksToSpotifyPlaylist(trackUris) {
   }
 }
 
-function removeTracksFromSpotifyPlaylist(trackUris) {
+// eslint-disable-next-line no-unused-vars
+function removeFirstNTracks(n) {
+  if (n <= 0) return;
+
   const playlistId = PropertiesService.getScriptProperties().getProperty('SPOTIFY_PLAYLIST_ID');
   const accessToken = getSpotifyAccessToken();
+  const SPOTIFY_PLAYLISTS_API_URL = 'https://api.spotify.com/v1/playlists';
 
-  for (let i = 0; i < trackUris.length; i += SPOTIFY_API_BATCH_SIZE) {
-    const batch = trackUris.slice(i, i + SPOTIFY_API_BATCH_SIZE);
-    const tracksToRemove = batch.map((uri) => ({ uri }));
+  const limit = Math.min(n, SPOTIFY_API_BATCH_SIZE); // Spotify's max page size
+  const url = `${SPOTIFY_PLAYLISTS_API_URL}/${playlistId}/tracks?fields=items(track(uri))&limit=${limit}`;
+  const response = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: {
+      Authorization: 'Bearer ' + accessToken,
+    },
+  });
 
-    const response = UrlFetchApp.fetch(`${SPOTIFY_PLAYLISTS_API_URL}/${playlistId}/tracks`, {
-      method: 'delete',
-      contentType: 'application/json',
-      headers: {
-        Authorization: 'Bearer ' + accessToken,
-      },
-      payload: JSON.stringify({ tracks: tracksToRemove }),
-      muteHttpExceptions: true,
-    });
+  const result = JSON.parse(response.getContentText());
+  const items = result.items;
 
-    const result = JSON.parse(response.getContentText());
-    if (response.getResponseCode() !== 200) {
-      log(`Error removing tracks: ${JSON.stringify(result)}`);
-    } else {
-      log(`Successfully removed ${batch.length} tracks from the playlist.`);
-    }
+  const tracksToRemove = items.slice(0, n).map((item, index) => ({
+    uri: item.track.uri,
+    positions: [index],
+  }));
+
+  const deleteResponse = UrlFetchApp.fetch(`${SPOTIFY_PLAYLISTS_API_URL}/${playlistId}/tracks`, {
+    method: 'delete',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + accessToken,
+    },
+    payload: JSON.stringify({ tracks: tracksToRemove }),
+    muteHttpExceptions: true,
+  });
+
+  const deleteResult = JSON.parse(deleteResponse.getContentText());
+  if (deleteResponse.getResponseCode() !== 200) {
+    log(`Error removing tracks: ${JSON.stringify(deleteResult)}`);
+  } else {
+    log(`Successfully removed the first ${tracksToRemove.length} tracks.`);
   }
 }

@@ -39,7 +39,7 @@ class Playlist:
     def items(self):
         return str(len(self.writes)), self.uris.copy()
 
-    def search(self, artist, title):
+    def search(self, artist, title, remix):
         return "repeat"
 
     def append(self, uris):
@@ -86,7 +86,7 @@ class SyncTests(TestCase):
         self.spotify.search = Mock(side_effect=SyncError("search failed"))
         sync(self.drive, self.spotify)
         sync(self.drive, self.spotify)
-        self.spotify.search.assert_called_once_with("SOFI TUKKER & Silva", "Café")
+        self.spotify.search.assert_called_once_with("SOFI TUKKER & Silva", "Café (Radio Edit)", "Live")
         self.assertEqual(self.drive.state["positions"], {"late": 1})
         self.assertEqual(self.spotify.writes, [])
 

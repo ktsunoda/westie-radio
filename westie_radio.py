@@ -8,6 +8,7 @@ import re
 from collections import Counter
 from datetime import datetime
 
+from spotify_matching import find_track
 from virtualdj import parse_m3u
 
 LOG = logging.getLogger(__name__)
@@ -109,12 +110,8 @@ class Spotify:
     def api(self, method, path, **kwargs):
         return request(self.session, "Spotify", method, SPOTIFY + path, **kwargs).json()
 
-    def search(self, artist, title):
-        result = self.api(
-            "GET", "/search",
-            params={"q": f"track:{title} artist:{artist}", "type": "track", "limit": 1},
-        )["tracks"]["items"]
-        return result[0]["uri"] if result else None
+    def search(self, artist, title, remix):
+        return find_track(self.api, artist, title, remix)
 
     def snapshot(self):
         return self.api("GET", self.path, params={"fields": "snapshot_id"})["snapshot_id"]
@@ -243,13 +240,13 @@ def sync(drive, spotify):
     for entry in plays[last:]:
         handled = entry["position"]
         artist = entry.get("artist", "").strip()
-        title = re.sub(r"\s*\(feat\.[^)]*\)", "", entry.get("title", ""), count=1, flags=re.I)
-        title = re.sub(r"\s*\(radio edit\)", "", title, count=1, flags=re.I).strip()
+        title = entry.get("title", "").strip()
+        remix = entry.get("remix", "").strip()
         if not artist or not title:
             counts["missing_metadata"] += 1
             continue
         try:
-            uri = spotify.search(artist, title)
+            uri = spotify.search(artist, title, remix)
         except (SyncError, ValueError, KeyError, TypeError) as error:
             counts["search_failed"] += 1
             LOG.warning("Search failed (%s)", str(error) if isinstance(error, SyncError) else "invalid response")

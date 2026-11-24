@@ -5,7 +5,7 @@ Westie Radio syncs VirtualDJ play history from Google Drive to a rolling Spotify
 ## How it works
 
 - Upload VirtualDJ exports named `YYYY-MM-DD.m3u` directly to the configured history folder. Westie Radio picks the most recently modified matching file, including a prior day's file if it was updated later.
-- The sync reads new media entries in order and searches Spotify by artist and title. Repeated plays can appear more than once. Entries with missing metadata, no match, or a failed search are counted in the run logs and skipped.
+- The sync reads new media entries in order and searches Spotify using the artist, title, and any remix metadata. It checks the recording version and artist credits, and skips ambiguous matches. Repeated plays can appear more than once. Entries with missing metadata, no match, or a failed search are counted in the run logs and skipped.
 - A private JSON file in Drive tracks the last handled position for each history file. Append new plays to the existing file to retain its Drive file ID and checkpoint. An unchanged rerun makes no Spotify writes if the playlist is already within the cap.
 - The playlist is capped at 200 entries. Trimming selects URIs from the oldest entries. Spotify can remove newer copies of those URIs too, so the playlist may end up below 200.
 

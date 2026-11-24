@@ -137,9 +137,9 @@ class Spotify:
         self.api("POST", self.path + "/items", json={"uris": uris})
 
     def remove(self, snapshot, uris):
-        self.api("DELETE", self.path + "/items", json={
+        return self.api("DELETE", self.path + "/items", json={
             "snapshot_id": snapshot, "items": [{"uri": uri} for uri in uris],
-        })
+        })["snapshot_id"]
 
 
 def checkpoint(drive, playlist):
@@ -177,7 +177,7 @@ def reconcile(drive, spotify, state):
 def send_pending(drive, state, send, *args):
     drive.save(state)
     try:
-        send(*args)
+        return send(*args)
     except HttpError as error:
         if error.status in {400, 401, 403, 404, 409, 429}:
             del state["pending"]
@@ -194,9 +194,13 @@ def trim(drive, spotify, state, counts):
             raise SyncError("Spotify's oldest entries have no removable URI")
         expected = [uri for uri in current if uri not in targets]
         state["pending"] = {"kind": "trim", "after": expected}
-        send_pending(drive, state, spotify.remove, snapshot, targets)
+        trim_snapshot = send_pending(drive, state, spotify.remove, snapshot, targets)
         snapshot, updated = spotify.items()
-        if updated != expected:
+        if updated != expected and (
+            snapshot != trim_snapshot
+            or len(updated) >= len(current)
+            or [uri for uri in updated if uri not in targets] != expected
+        ):
             raise SyncError("Spotify trim result needs review")
         finish(drive, state)
         counts["removed"] += len(current) - len(updated)

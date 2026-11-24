@@ -49,6 +49,7 @@ class Playlist:
     def remove(self, snapshot, uris):
         self.writes.append("remove")
         self.uris = [uri for uri in self.uris if uri not in uris]
+        return str(len(self.writes))
 
 
 class SyncTests(TestCase):
@@ -170,3 +171,17 @@ class SyncTests(TestCase):
             request(session, "Spotify token", "POST", "https://example.test/token")
         self.assertNotIn("private diagnostic", str(failure.exception))
         session.request.assert_called_once()
+
+    def test_successful_trim_can_leave_a_newer_copy(self):
+        self.spotify.uris = ["repeat"] + [str(n) for n in range(199)]
+
+        def keep_newer_copy(snapshot, uris):
+            self.assertEqual(uris, ["repeat"])
+            self.spotify.writes.append("remove")
+            self.spotify.uris.pop(0)
+            return str(len(self.spotify.writes))
+
+        self.spotify.remove = keep_newer_copy
+        sync(self.drive, self.spotify)
+        self.assertEqual(self.spotify.uris, [str(n) for n in range(199)] + ["repeat"])
+        self.assertNotIn("pending", self.drive.state)

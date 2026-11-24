@@ -1,147 +1,35 @@
-# 🎧 Westie Radio
+# Westie Radio
 
-The Python sync runs on Render. See the [Render setup guide](docs/render-setup.md) for configuration, testing, and production startup. The sections below describe the legacy Apps Script setup.
+Westie Radio syncs VirtualDJ play history from Google Drive to a rolling Spotify playlist. It runs as a Python command on a Render Cron Job, with a recommended schedule of every 15 minutes.
 
-A Google Apps Script project that syncs Virtual DJ `.m3u` history files from Google Drive to a Spotify playlist. Designed to automate playlist curation based on your DJ sets — with logging, cleanup, and tracks not found reporting.
+## How it works
 
----
+- Upload VirtualDJ exports named `YYYY-MM-DD.m3u` directly to the configured history folder. Westie Radio picks the most recently modified matching file, including a prior day's file if it was updated later.
+- The sync reads new media entries in order and searches Spotify by artist and title. Repeated plays can appear more than once. Entries with missing metadata, no match, or a failed search are counted in the run logs and skipped.
+- A private JSON file in Drive tracks the last handled position for each history file. Append new plays to the existing file to retain its Drive file ID and checkpoint. An unchanged rerun makes no Spotify writes if the playlist is already within the cap.
+- The playlist is capped at 200 entries. Trimming selects URIs from the oldest entries. Spotify can remove newer copies of those URIs too, so the playlist may end up below 200.
 
-## 🔥 Features
+## Set up your own deployment
 
-- Syncs your latest `.m3u` file from a Google Drive folder
-- Searches Spotify for matching tracks by artist/title
-- Adds new tracks to a target Spotify playlist
-- Removes oldest tracks if playlist exceeds 200 items
-- Logs activity in a Google Sheet
-- Tracks that can’t be found on Spotify are logged separately
+Follow the [Render setup guide](docs/render-setup.md). The same guide is the runbook if you ask an agent to deploy Westie Radio for you.
 
----
+You’ll need a Google Cloud project with the Drive API enabled, a service account, a Google Drive history folder and checkpoint file, a Spotify developer app and editable playlist, and a Render workspace. Start with a separate test playlist and checkpoint. Complete Spotify consent in your own browser, and put credentials directly into Render’s private settings. Keep keys, tokens, and private configuration out of the repository, chat, and logs.
 
-## 🛠 Requirements
+If you’re migrating an existing sync, verify the test deployment before switching to the production playlist. The guide explains how to start at the end of your existing history so it doesn’t replay.
 
-- Google Workspace account
-- Spotify Developer account
-- `.m3u` history files from Virtual DJ
-- A Google Drive folder to upload history files
-- A Google Sheet for logging
+## Local development
 
----
+Use Python 3.10 or newer.
 
-## 🚀 Setup
-
-### 1. Clone the Repo
-
-You can use [`clasp`](https://github.com/google/clasp) to sync the Apps Script project locally:
-
-```bash
-git clone https://github.com/ktsunoda/westie-radio.git
-cd westie-radio
-clasp create --type standalone --title "Westie Radio"
-clasp push
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
 ```
 
-Or manually paste the `.gs` files into [script.google.com](https://script.google.com).
+The offline tests need no Google or Spotify credentials. With the test configuration from the setup guide, run `python -m westie_radio check-drive` to verify Drive access or `python -m westie_radio` to sync the test playlist.
 
----
+The [Apps Script audit](docs/apps-script-audit.md) documents the legacy implementation and [migration plan](docs/migration-plan.md). The Apps Script files are retained for reference.
 
-### 2. Add the OAuth2 Library
-
-In the Apps Script Editor:
-
-- Go to **Libraries**
-- Add this Script ID:  
-  `1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF`
-- Choose the latest version of the OAuth2 library by Google
-
----
-
-### 3. Set Script Properties
-
-In **Project Settings** or via `PropertiesService`, set:
-
-| Property Key                         | Description                              |
-| ------------------------------------ | ---------------------------------------- |
-| `SPOTIFY_CLIENT_ID`                  | From Spotify Developer Console           |
-| `SPOTIFY_CLIENT_SECRET`              | From Spotify Developer Console           |
-| `SPOTIFY_PLAYLIST_ID`                | Your target Spotify playlist ID          |
-| `VDJ_HISTORY_GOOGLE_DRIVE_FOLDER_ID` | Google Drive folder ID with `.m3u` files |
-| `LOG_GOOGLE_DRIVE_SHEET_ID`          | Google Sheet ID to store logs            |
-
----
-
-### 4. Authorize Spotify
-
-In the Apps Script Editor, run:
-
-```js
-authorizeSpotify();
-```
-
-- Open the authorization URL that appears in the logs
-- Grant permission to the app
-- You’ll see a "Success!" message
-
----
-
-### 5. Upload Your VDJ `.m3u` History Files
-
-- Upload `.m3u` files (named like `2025-05-17.m3u`) into your specified Google Drive folder
-- Ensure they contain lines with `<artist>` and `<title>` tags inside `#EXTVDJ:`
-
----
-
-### 6. Run the Sync
-
-Run the `sync()` function manually in the script editor or set up a time-based trigger:
-
-- Go to **Triggers**
-- Add a trigger for `sync`
-- Set it to run every hour, day, or however often you like
-
----
-
-## 📓 Logs
-
-The project logs two types of data into the Google Sheet you specified:
-
-### Sheet: `Logs`
-
-- Timestamps and messages from sync runs
-
-### Sheet: `Tracks Not Found`
-
-- Tracks not found on Spotify (for review or manual curation)
-
----
-
-## 📁 Project Structure
-
-```
-Code.js        → Orchestration + sync logic
-spotify.gs     → Spotify API integration
-vdj.gs         → VDJ file parsing
-logging.gs     → Spreadsheet logging
-```
-
----
-
-## 🧪 Example
-
-If a file `2025-05-17.m3u` is uploaded, it will:
-
-- Extract the latest track list
-- Add any new tracks to your playlist
-- Trim the playlist to 200 tracks max
-- Log skipped and tracks not found
-
----
-
-## 📄 License
-
-[MIT](LICENSE)
-
----
-
-## 🤝 Contributing
-
-PRs are welcome! Please feel free to fork, modify, and send a pull request.
+[MIT license](LICENSE)

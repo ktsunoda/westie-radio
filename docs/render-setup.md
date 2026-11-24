@@ -1,10 +1,13 @@
 # Westie Radio on Render
 
-Use the existing `westie-radio` Cron Job. Point its build source at this repo only when the test configuration is ready. Keep the Apps Script trigger running until the live test is complete.
+Use a Render Cron Job named `westie-radio`. Create one for a fresh deployment or reuse an existing cron job. If you are migrating from Apps Script, keep the old trigger active while testing against separate resources.
 
 ## Test configuration
 
-Use a separate Spotify playlist that the authorizing user can edit. In Google Drive, create a test history folder with a sample `YYYY-MM-DD.m3u` file. Upload a regular file named `checkpoint-test.json` with contents `{}` to the Westie Radio app folder. Give the Westie Radio service account Viewer access to history and Editor access to the checkpoint. The Google Drive API must be enabled in the service account's project. The app uses a read-only Drive session for reading and a write-scoped session for the checkpoint. Drive sharing limits what the account can modify.
+1. In Google Cloud, enable the Google Drive API, create a dedicated Westie Radio service account, and obtain its JSON key. Store the key as a Render secret file.
+2. In Google Drive, create a test history folder containing a sample `YYYY-MM-DD.m3u` file. Upload a plain JSON file named `checkpoint-test.json` with contents `{}` outside the history folder. Create the file under your Google account so it has a human owner. Share the history folder with the service account as Viewer and the checkpoint as Editor. Use the folder ID for history and the file ID for the checkpoint.
+3. Create a separate test playlist in Spotify that the authorizing account can edit, and create or select your Spotify developer app. Authorize the app using the instructions below.
+4. In Render, connect your cron job to this repository and enter the settings below. For the first deploy, use the test playlist, history folder, and checkpoint IDs.
 
 | Render setting | Value |
 | --- | --- |
@@ -38,4 +41,4 @@ Spotify refresh tokens expire six months after authorization. Reauthorize the Sp
 
 ## Start production
 
-After the test passes, stop the Apps Script trigger and wait for any in-flight sync. Upload a fresh production checkpoint file containing `{}`. With the production Drive folder, checkpoint file, and Spotify playlist IDs configured, run `python -m westie_radio seed` while the scheduled job is idle. It records the current end of every matching file and does not call Spotify. Then activate the schedule and verify both the first run and an unchanged rerun.
+After the test passes, stop the old sync trigger if you have one and wait for any in-flight run. Upload a fresh production checkpoint file containing `{}`. With the production Drive folder, checkpoint file, and Spotify playlist IDs configured, run `python -m westie_radio seed` while the scheduled job is idle. It records the current end of every matching file and does not call Spotify. Then activate the schedule and verify both the first run and an unchanged rerun. If you want a clean deployment to import the current history file on its first run, leave the fresh checkpoint as `{}` and skip seeding.

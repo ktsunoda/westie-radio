@@ -30,6 +30,6 @@ python -m unittest discover -s tests -v
 
 The offline tests need no Google or Spotify credentials. With the test configuration from the setup guide, run `python -m westie_radio check-drive` to verify Drive access or `python -m westie_radio` to sync the test playlist.
 
-The [Apps Script audit](docs/apps-script-audit.md) documents the legacy implementation and [migration plan](docs/migration-plan.md). The Apps Script files are retained for reference.
+The [Apps Script audit](docs/apps-script-audit.md) and [migration plan](docs/migration-plan.md) document the retired implementation and the move to Python.
 
 [MIT license](LICENSE)

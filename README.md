@@ -1,5 +1,7 @@
 # 🎧 Westie Radio
 
+The Python sync runs on Render. See the [Render setup guide](docs/render-setup.md) for configuration, testing, and production startup. The sections below describe the legacy Apps Script setup.
+
 A Google Apps Script project that syncs Virtual DJ `.m3u` history files from Google Drive to a Spotify playlist. Designed to automate playlist curation based on your DJ sets — with logging, cleanup, and tracks not found reporting.
 
 ---

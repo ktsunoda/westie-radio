@@ -1,3 +1,9 @@
 .vscode
 .clasp.json
 node_modules/
+
+__pycache__/
+.venv/
+.env
+.env.*
+*-service-account.json

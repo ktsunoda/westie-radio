@@ -3,7 +3,7 @@ from unittest import TestCase
 from unittest.mock import Mock
 
 from virtualdj import parse_m3u
-from westie_radio import Drive, HttpError, SyncError, sync
+from westie_radio import Drive, HttpError, SyncError, request, sync
 
 
 PLAY = "#EXTVDJ:<artist>SOFI TUKKER & Silva</artist><title>Café (Radio Edit)</title><remix>Live</remix><songlength>201.732</songlength>\r\n/music/Café.m4a\r\n"
@@ -158,3 +158,15 @@ class SyncTests(TestCase):
         sync(self.drive, self.spotify)
         self.assertEqual(self.drive.state["positions"], {"late": 1, "older": 1})
         self.assertEqual(self.spotify.writes, ["append", "append"])
+
+    def test_expired_spotify_authorization_reports_reconnect(self):
+        session = Mock()
+        response = session.request.return_value
+        response.status_code = 400
+        response.json.return_value = {
+            "error": "invalid_grant", "error_description": "private diagnostic",
+        }
+        with self.assertRaisesRegex(SyncError, "Reconnect Westie Radio") as failure:
+            request(session, "Spotify token", "POST", "https://example.test/token")
+        self.assertNotIn("private diagnostic", str(failure.exception))
+        session.request.assert_called_once()

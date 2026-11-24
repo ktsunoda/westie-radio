@@ -30,6 +30,12 @@ Obtain the Spotify refresh token using Spotify's [Authorization Code flow](https
 - Verify the checkpoint survives a redeploy. If a write is interrupted, the next run checks the observed playlist against the expected result. An inconclusive result leaves the pending operation in Drive and stops the run. Review the actual playlist and saved pending operation before resuming.
 - Use Render's Logs and Runs pages for sync summaries and errors.
 
+## Spotify authorization alerts
+
+Set the cron job's notifications to **Only failure notifications** and enable **Email** as a notification destination in the Render workspace. Render sends failure emails for failed runs, including when Spotify rejects the refresh token. The job logs a reconnect message for `invalid_grant` and exits before reading or updating the checkpoint or playlist.
+
+Spotify refresh tokens expire six months after authorization. Reauthorize the Spotify app and replace `SPOTIFY_REFRESH_TOKEN` in Render to resume from the saved position. Trigger one run to verify the replacement. [Render notifications](https://render.com/docs/notifications) · [Spotify refresh token expiration](https://developer.spotify.com/blog/2026-06-18-refresh-token-expiration)
+
 ## Start production
 
 After the test passes, stop the Apps Script trigger and wait for any in-flight sync. Upload a fresh production checkpoint file containing `{}`. With the production Drive folder, checkpoint file, and Spotify playlist IDs configured, run `python -m westie_radio seed` while the scheduled job is idle. It records the current end of every matching file and does not call Spotify. Then activate the schedule and verify both the first run and an unchanged rerun.

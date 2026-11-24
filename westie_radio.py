@@ -33,6 +33,16 @@ def request(session, service, method, url, **kwargs):
         response = session.request(method, url, timeout=30, **kwargs)
     except Exception:
         raise SyncError(f"{service} {method} request failed") from None
+    if service == "Spotify token" and response.status_code == 400:
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+        if isinstance(payload, dict) and payload.get("error") == "invalid_grant":
+            raise SyncError(
+                "Spotify authorization expired or was revoked. "
+                "Reconnect Westie Radio and update SPOTIFY_REFRESH_TOKEN in Render."
+            )
     if not 200 <= response.status_code < 300:
         raise HttpError(service, method, response.status_code)
     return response

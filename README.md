@@ -1,5 +1,7 @@
 # Westie Radio
 
+Westie Radio has moved to [Westie DJ Tools](https://github.com/ktsunoda/westie-dj-tools/tree/main/tools/westie-radio). Use that repository for current code, setup, and updates.
+
 Westie Radio syncs VirtualDJ play history from Google Drive to a rolling Spotify playlist. It runs as a Python command on a Render Cron Job, with a recommended schedule of every 15 minutes.
 
 ## How it works
